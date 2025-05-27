@@ -1,9 +1,39 @@
 import React from 'react';
 import Title from '../components/Title';
 import { assets, userBookingsDummyData } from '../assets/assets';
+import { useAppContext } from '../context/AppContext';
+import toast from 'react-hot-toast';
 
 const MyBookings = () => {
-  const [bookings, setBookings] = React.useState(userBookingsDummyData);
+  const { axios, user } = useAppContext();
+  const [bookings, setBookings] = React.useState([]);
+
+  const fetchUserBookings = async () => {
+    try {
+      const { data } = await axios.get('/api/bookings/user', {
+        headers: {
+          Authorization: `Bearer ${user?.id}`
+        }
+      });
+      if (data.success) {
+        setBookings(data.bookings);
+      } else {
+        toast.error(data.message || 'Failed to fetch bookings');
+        // setBookings(userBookingsDummyData); // Fallback to dummy data if API fails
+      }
+    }
+    catch (error) {
+      console.error("Error fetching user bookings:", error);
+      toast.error(error.message || 'An error occurred while fetching bookings');
+      // setBookings(userBookingsDummyData); // Fallback to dummy data if API fails
+    }
+  }
+
+  React.useEffect(() => {
+    if (user) {
+      fetchUserBookings();
+    }
+  }, [user]);
 
   return (
     <div className="py-28 md:py-35 md:pt-32 px-4 md:px-16 lg:px-24 xl:px-32">
@@ -43,7 +73,7 @@ const MyBookings = () => {
                   <img
                     src={assets.locationIcon}
                     alt="location-icon"
-                    className="w-5 h-5 object-contain" // Smaller icon size
+                    className="w-5 h-5 object-contain"
                   />
                   <span>{booking.room.hotel.address}</span>
                 </div>
@@ -51,7 +81,7 @@ const MyBookings = () => {
                   <img
                     src={assets.guestsIcon}
                     alt="guests-icon"
-                    className="w-5 h-5 object-contain" // Smaller icon size
+                    className="w-5 h-5 object-contain"
                   />
                   <span>Guests: {booking.guests}</span>
                 </div>

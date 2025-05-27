@@ -1,23 +1,65 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { roomsDummyData } from '../../assets/assets';
 import Title from '../../components/Title';
+import { useAppContext } from '../../context/AppContext';
+import { toast } from 'react-hot-toast';
 
 const ListRoom = () => {
-  // This component will list all the rooms added by the hotel owner
-  // You can fetch the rooms from the backend and display them here
-  // You can also add functionality to edit or delete rooms from this page
-  // For now, let's just create a basic structure for this page
-  const [rooms, setRooms] = React.useState(roomsDummyData);
+  const [rooms, setRooms,currency] = useState(roomsDummyData);
+  const { axios, user } = useAppContext();
 
-  const handleToggle = (index) => {
-    const updatedRooms = [...rooms];
-    updatedRooms[index].active = !updatedRooms[index].active;
-    setRooms(updatedRooms);
+  // Fetch rooms of the hotel owner
+  const fetchRooms = async () => {
+    try {
+      const userId = user?.id;
+      const { data } = await axios.get('/api/rooms/owner', { headers: { Authorization: `Bearer ${userId}` } });
+      if (data.success) {
+        setRooms(data.rooms);
+      } else {
+        toast.error(data.message || 'Failed to fetch rooms');
+      }
+    } catch (error) {
+      toast.error(error.message || 'An error occurred while fetching rooms');
+    }
+  };
+
+  useEffect(() => {
+    if (user) {
+      fetchRooms();
+    }
+  }, [user]);
+
+  // Handle toggle for room active status
+  const handleToggle = async (roomId) => {
+    try {
+      const { data } = await axios.post(
+        '/api/rooms/toggle-availability',
+        { roomId },
+        {
+          headers: {
+            Authorization: `Bearer ${user?.id}`,
+          },
+        }
+      );
+      if (data.success) {
+        toast.success(data.message);
+        fetchRooms(); // Refresh the room list after toggling
+      } else {
+        toast.error(data.message || 'Failed to update room status');
+      }
+    } catch (error) {
+      toast.error(error.message || 'Failed to update room status');
+    }
   };
 
   return (
     <div>
-      <Title align="left" font="outfit" title="Room Listings" subTitle="view, edit, or manage all listed rooms. Keep the information up-to-date to provide the best experience for users" />
+      <Title
+        align="left"
+        font="outfit"
+        title="Room Listings"
+        subTitle="view, edit, or manage all listed rooms. Keep the information up-to-date to provide the best experience for users"
+      />
       <p className="text-gray-500 mt-8">All rooms</p>
       <div className="overflow-x-auto">
         <table className="w-full table-auto">
@@ -25,22 +67,26 @@ const ListRoom = () => {
             <tr>
               <th className="py-3 px-4 text-gray-800 font-medium text-center">Name</th>
               <th className="py-3 px-4 text-gray-800 font-medium text-center max-sm:hidden">Facility</th>
-              <th className="py-3 px-4 text-gray-800 font-medium text-center">Price/night</th>
+              <th className="py-3 px-4 text-gray-800 font-medium text-center">{currency} Price/night</th>
               <th className="py-3 px-4 text-gray-800 font-medium text-center">Actions</th>
             </tr>
           </thead>
           <tbody>
             {rooms.map((room, index) => (
-              <tr key={index} className="border-b border-gray-200">
+              <tr key={room._id || index} className="border-b border-gray-200">
                 <td className="py-3 px-4 text-gray-700 border-t border-gray-300 text-center">{room.roomType}</td>
-                <td className="py-3 px-4 text-gray-700 border-t border-gray-300 max-sm:hidden text-center">{room.amenities.join(', ')}</td>
-                <td className="py-3 px-4 text-gray-700 border-t border-gray-300 text-center">${room.pricePerNight}</td>
+                <td className="py-3 px-4 text-gray-700 border-t border-gray-300 max-sm:hidden text-center">
+                  {room.amenities.join(', ')}
+                </td>
+                <td className="py-3 px-4 text-gray-700 border-t border-gray-300 text-center">
+                  ${room.pricePerNight}
+                </td>
                 <td className="py-3 px-4 border-t border-gray-300 text-center flex justify-center">
                   <label className="cursor-pointer">
                     <input
                       type="checkbox"
                       checked={room.active}
-                      onChange={() => handleToggle(index)}
+                      onChange={() => handleToggle(room._id)}
                       className="toggle-checkbox hidden"
                     />
                     <div
