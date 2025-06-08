@@ -37,7 +37,7 @@ const MyBookings = () => {
         }
       });
       if (data.success) {
-        toast.success('Payment successful!');
+        // toast.success('Payment successful!');
         window.location.href = data.url
       } else {
         toast.error(data.message || 'Payment failed');
